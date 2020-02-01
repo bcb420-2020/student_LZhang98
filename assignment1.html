@@ -371,7 +371,7 @@ summary {
 <p>Note: many code chunks were adapted from Prof. Isserlin’s BCB420 lectures and Dr. Boris Steipe’s online BCH441 modules.</p>
 <div id="download-the-data-set" class="section level2">
 <h2>Download the Data Set</h2>
-<p>I chose GEO dataset <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE83213">GSE83213</a> for this assignment. First, install the required packages to download off of GEO.</p>
+<p>I chose GEO dataset <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE57148">GSE57148</a> for this assignment. First, install the required packages to download off of GEO.</p>
 <pre class="r"><code>if (! requireNamespace(&quot;BiocManager&quot;, quietly = TRUE)) {
     install.packages(&quot;BiocManager&quot;)
 }
@@ -379,53 +379,38 @@ if (! requireNamespace(&quot;GEOquery&quot;, quietly = TRUE)) {
     BiocManager::install(&quot;GEOquery&quot;)
 }</code></pre>
 <p>Now download the supplementary files (only if they have not been downloaded already):</p>
-<pre class="r"><code>datafile &lt;- &quot;GSE83213_non-normalized.txt.gz&quot;
+<pre class="r"><code>datafile &lt;- &quot;GSE57148_COPD_FPKM_Normalized.txt.gz&quot;
 if (!file.exists(datafile)) {
-    files &lt;- GEOquery::getGEOSuppFiles(&quot;GSE83213&quot;, makeDirectory = FALSE)
+    files &lt;- GEOquery::getGEOSuppFiles(&quot;GSE57148&quot;, makeDirectory = FALSE)
 }
-data &lt;- read.delim(datafile,header=TRUE)
-length(rownames(data))</code></pre>
-<pre><code>## [1] 47323</code></pre>
-<pre class="r"><code>colnames(data)</code></pre>
-<pre><code>##   [1] &quot;ID_REF&quot;            &quot;P1_T&quot;              &quot;Detection.Pval&quot;   
-##   [4] &quot;P1_NT_0&quot;           &quot;Detection.Pval.1&quot;  &quot;P1_NT_2&quot;          
-##   [7] &quot;Detection.Pval.2&quot;  &quot;P1_NT_4&quot;           &quot;Detection.Pval.3&quot; 
-##  [10] &quot;P1_NT_6&quot;           &quot;Detection.Pval.4&quot;  &quot;P2_T&quot;             
-##  [13] &quot;Detection.Pval.5&quot;  &quot;P2_NT_2&quot;           &quot;Detection.Pval.6&quot; 
-##  [16] &quot;P2_NT_4&quot;           &quot;Detection.Pval.7&quot;  &quot;P2_NT_6&quot;          
-##  [19] &quot;Detection.Pval.8&quot;  &quot;P3_T&quot;              &quot;Detection.Pval.9&quot; 
-##  [22] &quot;P3_NT_0&quot;           &quot;Detection.Pval.10&quot; &quot;P3_NT_2&quot;          
-##  [25] &quot;Detection.Pval.11&quot; &quot;P3_NT_4&quot;           &quot;Detection.Pval.12&quot;
-##  [28] &quot;P3_NT_6&quot;           &quot;Detection.Pval.13&quot; &quot;P4_NT_0&quot;          
-##  [31] &quot;Detection.Pval.14&quot; &quot;P4_NT_2&quot;           &quot;Detection.Pval.15&quot;
-##  [34] &quot;P4_NT_4&quot;           &quot;Detection.Pval.16&quot; &quot;P4_NT_6&quot;          
-##  [37] &quot;Detection.Pval.17&quot; &quot;P5_T&quot;              &quot;Detection.Pval.18&quot;
-##  [40] &quot;P5_NT_0&quot;           &quot;Detection.Pval.19&quot; &quot;P5_NT_2&quot;          
-##  [43] &quot;Detection.Pval.20&quot; &quot;P5_NT_4&quot;           &quot;Detection.Pval.21&quot;
-##  [46] &quot;P5_NT_6&quot;           &quot;Detection.Pval.22&quot; &quot;P6_T&quot;             
-##  [49] &quot;Detection.Pval.23&quot; &quot;P6_NT_0&quot;           &quot;Detection.Pval.24&quot;
-##  [52] &quot;P6_NT_2&quot;           &quot;Detection.Pval.25&quot; &quot;P6_NT_4&quot;          
-##  [55] &quot;Detection.Pval.26&quot; &quot;P6_NT_6&quot;           &quot;Detection.Pval.27&quot;
-##  [58] &quot;P7_T&quot;              &quot;Detection.Pval.28&quot; &quot;P7_NT_2&quot;          
-##  [61] &quot;Detection.Pval.29&quot; &quot;P7_NT_4&quot;           &quot;Detection.Pval.30&quot;
-##  [64] &quot;P7_NT_6&quot;           &quot;Detection.Pval.31&quot; &quot;P8_T&quot;             
-##  [67] &quot;Detection.Pval.32&quot; &quot;P8_NT_0&quot;           &quot;Detection.Pval.33&quot;
-##  [70] &quot;P8_NT_2&quot;           &quot;Detection.Pval.34&quot; &quot;P8_NT_4&quot;          
-##  [73] &quot;Detection.Pval.35&quot; &quot;P8_NT_6&quot;           &quot;Detection.Pval.36&quot;
-##  [76] &quot;P9_T&quot;              &quot;Detection.Pval.37&quot; &quot;P9_NT_0&quot;          
-##  [79] &quot;Detection.Pval.38&quot; &quot;P9_NT_2&quot;           &quot;Detection.Pval.39&quot;
-##  [82] &quot;P9_NT_4&quot;           &quot;Detection.Pval.40&quot; &quot;P9_NT_6&quot;          
-##  [85] &quot;Detection.Pval.41&quot; &quot;P10_T&quot;             &quot;Detection.Pval.42&quot;
-##  [88] &quot;P10_NT_0&quot;          &quot;Detection.Pval.43&quot; &quot;P10_NT_2&quot;         
-##  [91] &quot;Detection.Pval.44&quot; &quot;P10_NT_4&quot;          &quot;Detection.Pval.45&quot;
-##  [94] &quot;P10_NT_6&quot;          &quot;Detection.Pval.46&quot; &quot;P11_T&quot;            
-##  [97] &quot;Detection.Pval.47&quot; &quot;P11_NT_0&quot;          &quot;Detection.Pval.48&quot;
-## [100] &quot;P11_NT_2&quot;          &quot;Detection.Pval.49&quot; &quot;P11_NT_4&quot;         
-## [103] &quot;Detection.Pval.50&quot; &quot;P11_NT_6&quot;          &quot;Detection.Pval.51&quot;
-## [106] &quot;P12_T&quot;             &quot;Detection.Pval.52&quot; &quot;P12_NT_0&quot;         
-## [109] &quot;Detection.Pval.53&quot; &quot;P12_NT_2&quot;          &quot;Detection.Pval.54&quot;
-## [112] &quot;P12_NT_4&quot;          &quot;Detection.Pval.55&quot; &quot;P12_NT_6&quot;         
-## [115] &quot;Detection.Pval.56&quot;</code></pre>
+data &lt;- read.delim(datafile,header=TRUE,check.names=FALSE)
+dim(data)</code></pre>
+<pre><code>## [1] 16739   190</code></pre>
+<pre class="r"><code>data[1:10,1:5]</code></pre>
+<pre><code>##    GeneName     1017-NOR     1079-NOR      110-NOR   1199-NOR
+## 1      A1BG   1.56297620   1.54459698   1.44273544   1.532677
+## 2     A2LD1   1.44971121   1.40989972   1.68408023   1.586591
+## 3       A2M 666.90001145 793.10921234 562.35218665 564.968297
+## 4     A2ML1   0.04541598   0.03346838   0.04473035   0.000000
+## 5    A4GALT   5.99835215   6.45165566   2.63347971   4.974471
+## 6     A4GNT   0.30190422   0.00000000   0.50762052   1.180601
+## 7      AAAS   8.52166082  11.24197470  12.62253093  18.221576
+## 8      AACS   4.74670220   4.79006753   5.22008300  10.186223
+## 9     AADAC  14.41320115   4.93226977   9.35895186  18.221365
+## 10  AADACL2   1.88744488   0.00000000   0.11472986   1.015283</code></pre>
+<pre class="r"><code>data[1:10,186:190]</code></pre>
+<pre><code>##        815-COPD     821-COPD   852-COPD     964-COPD    984-COPD
+## 1    1.10986647 9.082195e-01   1.259962   0.89650646   2.5041596
+## 2    1.52914980 1.395737e+00   1.506785   2.55076264   4.6672033
+## 3  700.39515185 1.304266e+03 766.539503 611.91125481 334.3987253
+## 4    0.03253273 4.125315e-02   0.000000   0.03487444   0.0000000
+## 5    5.70446058 3.897412e+00   4.054444   3.27168831   4.9848494
+## 6    0.63542809 3.102240e-01   0.000000   0.47319774   0.1074092
+## 7   12.33452169 1.074107e+01  12.647181  11.59808173  11.3558172
+## 8    5.83456235 6.014072e+00   5.588500   5.95043433   5.8711835
+## 9    4.01829657 1.502143e+01   4.393493   7.23338738   6.9655488
+## 10   0.48145637 7.502139e-01   0.000000   0.22761522   0.0000000</code></pre>
+<p>The data table contains 190 columns (1 for gene names + 91 normal subjects + 98 COPD subjects). The normal subject samples form the control group.</p>
 </div>
 
 

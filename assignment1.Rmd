@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Download the Data Set
 
-I chose GEO dataset [GSE83213](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE83213) for this assignment. First, install the required packages to download off of GEO.
+I chose GEO dataset [GSE57148](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE57148) for this assignment. First, install the required packages to download off of GEO.
 
 ```{r package, results='hide', message=FALSE}
 if (! requireNamespace("BiocManager", quietly = TRUE)) {
@@ -25,12 +25,14 @@ if (! requireNamespace("GEOquery", quietly = TRUE)) {
 
 Now download the supplementary files (only if they have not been downloaded already):
 ```{r download}
-datafile <- "GSE83213_non-normalized.txt.gz"
+datafile <- "GSE57148_COPD_FPKM_Normalized.txt.gz"
 if (!file.exists(datafile)) {
-    files <- GEOquery::getGEOSuppFiles("GSE83213", makeDirectory = FALSE)
+    files <- GEOquery::getGEOSuppFiles("GSE57148", makeDirectory = FALSE)
 }
-data <- read.delim(datafile,header=TRUE)
-length(rownames(data))
-colnames(data)
+data <- read.delim(datafile,header=TRUE,check.names=FALSE)
+dim(data)
+data[1:10,1:5]
+data[1:10,186:190]
 ```
 
+The data table contains 190 columns (1 for gene names + 91 normal subjects + 98 COPD subjects). The normal subject samples form the control group.
