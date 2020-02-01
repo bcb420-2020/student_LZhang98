@@ -1,29 +1,36 @@
 ---
-title: "Assignment 1: Dataset Selection and Initial Processing"
+title: "Assignment 1: Data Set Selection and Initial Processing"
 author: "Luke Zhang"
 output: html_document
 ---
+
+Note: many code chunks were adapted from Prof. Isserlin's BCB420 lectures and Dr. Boris Steipe's online BCH441 modules.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Download the Data Set
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+I chose GEO dataset [GSE83213](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE83213) for this assignment. First, install the required packages to download off of GEO.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r package, results='hide', message=FALSE}
+if (! requireNamespace("BiocManager", quietly = TRUE)) {
+    install.packages("BiocManager")
+}
+if (! requireNamespace("GEOquery", quietly = TRUE)) {
+    BiocManager::install("GEOquery")
+}
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Now download the supplementary files (only if they have not been downloaded already):
+```{r download}
+datafile <- "GSE83213_non-normalized.txt.gz"
+if (!file.exists(datafile)) {
+    files <- GEOquery::getGEOSuppFiles("GSE83213", makeDirectory = FALSE)
+}
+data <- read.delim(datafile,header=TRUE)
+length(rownames(data))
+colnames(data)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
