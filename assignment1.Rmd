@@ -23,7 +23,7 @@ if (! requireNamespace("GEOquery", quietly = TRUE)) {
 }
 ```
 
-Now download the supplementary files (only if they have not been downloaded already):
+Now download the supplementary file (only if it has not been downloaded already):
 ```{r download}
 datafile <- "GSE57148_COPD_FPKM_Normalized.txt.gz"
 if (!file.exists(datafile)) {
@@ -35,4 +35,28 @@ data[1:10,1:5]
 data[1:10,186:190]
 ```
 
-The data table contains 190 columns (1 for gene names + 91 normal subjects + 98 COPD subjects). The normal subject samples form the control group.
+The data table contains 190 columns: 1 for gene names + 91 normal (control) subjects + 98 COPD (test) subjects. The normal subject samples form the control group.
+
+## Initial Assessment (Defining Groups and Getting Summaries)
+
+Let's calculate some aggregate statistical summaries for both groups.
+
+```{r summary}
+# Define the control group (NOR) and the diseased group (COPD)
+groupMeans <- data.frame(GeneName=data$GeneName, Normal=rowSums(data[,2:92])/91, COPD=rowSums(data[,93:190])/98)
+groupMeans[1:10,]
+#Display min, 1st quartile, median, mean, 3rd quartile, and max values of each group
+summary(groupMeans[,-1])
+boxplot(groupMeans[,-1])
+```
+
+The data shows noticeable change between the control and test groups, demonstrating that our data is of high enough quality to indicate some change in gene expression between the two groups.
+
+## Cleaning the data
+
+A common arbitrary threshold to select only significantly expressed transcripts is to only select rows of FPKM > 1. [citation needed]
+
+```{r cleaning}
+filteredMeans <- groupMeans[groupMeans$Normal > 1 & groupMeans$COPD > 1,]
+dim(filteredMeans)
+```
