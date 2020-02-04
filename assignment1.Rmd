@@ -228,3 +228,9 @@ I split my data into 4 groups of 3. One group for each combination of time and t
 *What is the final coverage of your dataset?*
 
 The final coverage of my dataset is 12914 features across 12 samples.
+
+Summarizing dimensions of data across entire workflow:
+```{r summary}
+summary <- list(initial=dim(data), merged_lanes=dim(new_data), removed_low_counts=dim(filtered_data), mapped=dim(mapped_data))
+summary
+```
