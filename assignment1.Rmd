@@ -117,10 +117,25 @@ length(data[,1]) - length(filtered_data[,1])
 
 Now that we've filtered out low counts, let's see what the distributions for all our samples look like:
 ```{r distribution}
-boxplot(log2(edgeR::cpm(filtered_data) + 0.0001), ylab = "log2 CPM", main = "Expression distribution, pre-normalization", cex = 0.5, cex.axis=0.7, las=2, ylim=c(-5,15))
+boxplot(log2(edgeR::cpm(filtered_data) + 0.0001), ylab = "log2 CPM", main = "Expression distribution, pre-normalization", cex = 0.5, cex.axis=0.7, las=2)
 ```
 
-The 5 outliers in the day-1 samples are 0 counts that were not filtered out by cpm. I cannot justify removing them, since it is possible that there is a systemically underexpressed gene for D1 samples (5 out of 6 D1 samples have this outlier) that is overexpressed in D20 samples.
+The boxplot shows 5 sets of outliers (1 each for 5 of 6 D1 samples). These are 0 counts that I recovered by adding the pseudocount of 0.0001 to my data so log2 doesn't throw an error warning. Let's see how many of these outliers are there:
+```{r outliers}
+
+idx <- 1:6
+zeroes <- vector(length=6)
+
+# Count number of 0s in each column.
+# aka determine number of 0-counts for D1 samples.
+for (i in idx) {
+    zero_idx <- which(filtered_data[, i] == 0)
+    zeroes[i] <- length(filtered_data[zero_idx,i])
+}
+zeroes
+```
+Each element of this vector is the number of zero counts for each of the D1 samples. We see that they total to 7 outliers.
+
 ```{r norm}
 
 filtered_matrix <- as.matrix(filtered_data)
@@ -200,7 +215,7 @@ Yes, there were. 345 expression values were unable to be mapped to HUGO symbols,
 
 *How many outliers were removed?*
 
-I noticed 5 outliers in my data (the zero-counts in 5 out of 6 D1 samples). I didn't remove any because I felt that their presence was too consistent across one group to simply be measurement error.
+I noticed 7 outliers in my data (the sets of zero-counts in 5 out of 6 D1 samples). I didn't remove any because I felt that their presence was too consistent across one group to simply be measurement error.
 
 *How did you handle replicates?*
 
