@@ -134,8 +134,12 @@ for (i in idx) {
 }
 zeroes
 ```
-Each element of this vector is the number of zero counts for each of the D1 samples. We see that they total to 7 outliers.
+Each element of this vector is the number of zero counts for each of the D1 samples. We see that they total to 7 outliers. Setting the limits to exclude these outliers:
+```{r}
+boxplot(log2(edgeR::cpm(filtered_data) + 0.0001), ylab = "log2 CPM", main = "Expression distribution, pre-normalization", cex = 0.5, cex.axis=0.7, las=2, ylim=c(-5,15))
+```
 
+Normalize the data with edgeR TMM:
 ```{r norm}
 
 filtered_matrix <- as.matrix(filtered_data)
@@ -215,7 +219,7 @@ Yes, there were. 345 expression values were unable to be mapped to HUGO symbols,
 
 *How many outliers were removed?*
 
-I noticed 7 outliers in my data (the sets of zero-counts in 5 out of 6 D1 samples). I didn't remove any because I felt that their presence was too consistent across one group to simply be measurement error.
+I noticed 7 outliers in my data (the sets of zero-counts in 5 out of 6 D1 samples). I didn't remove any because I felt that their presence was too consistent across one group to simply be measurement error. However, I did reframe the boxplots to exclude these leftover low counts to better see the rest of the data.
 
 *How did you handle replicates?*
 
