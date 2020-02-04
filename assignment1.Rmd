@@ -4,7 +4,7 @@ author: "Luke Zhang"
 output: html_document
 ---
 
-Note: many code chunks were adapted from Prof. Isserlin's BCB420 lectures and Dr. Boris Steipe's online BCH441 modules.
+Note: many code chunks were adapted from Prof. Isserlin's BCB420 lectures (especially low-count filtering, plotting, group definition, etc) and Dr. Boris Steipe's online BCH441 modules (particularly package setup and data download).
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Download the Data Set
 
-I chose GEO dataset [GSE57148](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE57148) for this assignment. First, install the required packages to download off of GEO.
+I chose GEO dataset [GSE110021](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE110021) for this assignment. First, install the required packages to download off of GEO.
 
 ```{r package, results='hide', message=FALSE}
 if (! requireNamespace("BiocManager", quietly = TRUE)) {
@@ -25,38 +25,181 @@ if (! requireNamespace("GEOquery", quietly = TRUE)) {
 
 Now download the supplementary file (only if it has not been downloaded already):
 ```{r download}
-datafile <- "GSE57148_COPD_FPKM_Normalized.txt.gz"
+datafile <- "GSE110021_counts.Aug2015.txt.gz"
 if (!file.exists(datafile)) {
-    files <- GEOquery::getGEOSuppFiles("GSE57148", makeDirectory = FALSE)
+    files <- GEOquery::getGEOSuppFiles("GSE110021", makeDirectory = FALSE)
 }
 data <- read.delim(datafile,header=TRUE,check.names=FALSE)
 dim(data)
-data[1:10,1:5]
-data[1:10,186:190]
+data[1:10,1:4]
 ```
 
-The data table contains 190 columns: 1 for gene names + 91 normal (control) subjects + 98 COPD (test) subjects. The normal subject samples form the control group.
+We see that we have reads of 25702 genes across 48 columns. Each set of 4 columns corresponds to 1 sample (4 lanes on the sequencing machine). Thus we have 12 samples: size of replicate groups is 3, with 1-day and 20-day timeframes with and without treatment by TGFb. 
 
-## Initial Assessment (Defining Groups and Getting Summaries)
+## Initial Assessment
 
-Let's calculate some aggregate statistical summaries for both groups.
+First let's recover the sample counts by merging the individual lane counts:
+```{r merge}
+# build a new data.frame via a list to contain 1 column every group of 4 lanes
+new_data <- list()
+for (i in 0:11) {
+    new_data <- c(new_data, list(rowSums(data[,(i+1):(4*(i+1))])))
+}
+new_data <- as.data.frame(new_data)
+rownames(new_data) <- rownames(data)
 
-```{r summary}
-# Define the control group (NOR) and the diseased group (COPD)
-groupMeans <- data.frame(GeneName=data$GeneName, Normal=rowSums(data[,2:92])/91, COPD=rowSums(data[,93:190])/98)
-groupMeans[1:10,]
-#Display min, 1st quartile, median, mean, 3rd quartile, and max values of each group
-summary(groupMeans[,-1])
-boxplot(groupMeans[,-1])
+# data colnames format:
+# <dayNum>.<treatment>.<replicateNum>_<sampleNum>_<laneNum>
+for (i in 1:12) {
+    colnames(new_data)[i] <- unlist(strsplit(colnames(data[i*4]), "_"))[1]
+}
+new_data[1:10,1:6]
+rownames(new_data)[1:10]
 ```
 
-The data shows noticeable change between the control and test groups, demonstrating that our data is of high enough quality to indicate some change in gene expression between the two groups.
+Get a sense of our data distribution and quality by plotting the data for all noTGFb replicates on day 1 and day 20, as well as calculate some summary statistics:
 
-## Cleaning the data
-
-A common arbitrary threshold to select only significantly expressed transcripts is to only select rows of FPKM > 1. [citation needed]
-
-```{r cleaning}
-filteredMeans <- groupMeans[groupMeans$Normal > 1 & groupMeans$COPD > 1,]
-dim(filteredMeans)
+```{r assess}
+dataToGraph <- cbind(new_data[,1:3], new_data[,7:9])
+# add a pseudocount so log2 evaluates
+boxplot(log2(dataToGraph + 0.0001), las = 2, ylab="log2 counts", main = "Expression distribution, pre-filtering", cex.axis=0.7)
+summary(log2(dataToGraph + 0.0001))
 ```
+
+The significant change we observe in this boxplot from day 1 to day 20 is hopefully indicative of good data with significant differential expression. Let's also define the 4 groups of interest within our data:
+```{r groups}
+# 4 groups:
+# 1. no TGFb, day 1
+# 2. no TGFb, day 20
+# 3. with TGFb, day 1
+# 4. with TGFb, day 20
+samples <- data.frame(lapply(colnames(new_data), FUN=function(x){unlist(strsplit(x,"\\."))[c(1,2)]}))
+rownames(samples) <- c("Day", "Treatment")
+colnames(samples) <- colnames(new_data)
+samples <- data.frame(t(samples))
+samples
+rownames(samples)
+```
+
+## Cleaning the Data
+
+We use edgeR to remove uninformative and/or lowly expressed genes by filtering out all reads whose counts are too low.
+
+```{r package2, results='hide', message=FALSE}
+if (! requireNamespace("edgeR", quietly = TRUE)) {
+    BiocManager::install("edgeR")
+}
+if (! requireNamespace("limma", quietly = TRUE)) {
+    BiocManager::install("limma")
+}
+```
+
+For our experiment, the size of the smallest group of replicates n = 3. Use edgeR::cpm to conver to CPM, then filter out any rows with CPM < 3:
+
+```{r cpm}
+cpm_data <- edgeR::cpm(new_data)
+rownames(cpm_data) <- rownames(new_data)
+
+filtered_data <- new_data[rowSums(cpm_data >= 1) >= 3, ]
+
+dim(filtered_data)
+```
+
+We were able to filter out...
+```{r filter_demo}
+length(data[,1]) - length(filtered_data[,1])
+```
+...12443 uninformative features.
+
+## Data Normalization
+
+Now that we've filtered out low counts, let's see what the distributions for all our samples look like:
+```{r distribution}
+boxplot(log2(edgeR::cpm(filtered_data) + 0.0001), ylab = "log2 CPM", main = "Expression distribution, pre-normalization", cex = 0.5, cex.axis=0.7, las=2)
+```
+
+The 5 outliers in the day-1 samples are 0 counts that were not filtered out by cpm. I cannot justify removing them, since it is possible that there is a systemically underexpressed gene for D1 samples (5 out of 6 D1 samples have this outlier) that is overexpressed in D20 samples.
+```{r norm}
+
+filtered_matrix <- as.matrix(filtered_data)
+
+# Normalize with respect to treatment type
+d <- edgeR::DGEList(counts=filtered_matrix, group=samples$Treatment)
+d <- edgeR::calcNormFactors(d)
+
+norm_data <- edgeR::cpm(d)
+
+boxplot(log2(norm_data + 0.0001), ylab = "log2 CPM", main= "Expression distribution, post-normalization", cex = 0.5, cex.axis=0.7, las=2)
+```
+
+TMM normalization did not remove the 0-count outliers, and the low-resolution view of the data pre- and post-normalization look very similar.
+
+Use an MDS plot to represent how well the normalized samples are distinguished. The first plot is before normalization, and the second plot is after normalization.
+
+```{r mds}
+limma::plotMDS(filtered_data, labels=rownames(samples), col=c("red","blue")[factor(samples$Treatment)], main="Sample feature clustering, pre-normalization")
+limma::plotMDS(d, labels=rownames(samples), col=c("red","blue")[factor(samples$Treatment)], main="Sample feature clustering, post-normalization")
+```
+
+We see much clearer separation between different treatment groups (D1 vs D20, TGFb vs noTGFb), as well as tighter clustering between replicates of the same treatment group. This is a good outcome and means our normalization was effective.
+
+## Mapping to HUGO Symbols
+
+Supplementary file reveals that the rownames in the data are Entrez Gene IDs. We must map from Entrez IDs to HUGO symbols. For this we need the org.Hs.eg.db package and its functions.
+```{r mapping, results='hide', message=FALSE}
+if (! requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+    BiocManager::install("org.Hs.eg.db")
+}
+if (! requireNamespace("annotate", quietly = TRUE)) {
+    BiocManager::install("annotate")
+}
+library(org.Hs.eg.db)
+
+# Map from Entrez Gene IDs to HUGO symbols
+symbols <- annotate::lookUp(rownames(filtered_data), "org.Hs.eg", "SYMBOL")
+
+# Remove all unmapped rows
+mapped_indices <- which(!is.na(symbols))
+mapped_data <- filtered_data[mapped_indices, ]
+
+# Set HUGO symbols as rownames of new dataframe
+mapped_symbols <- symbols[!is.na(symbols)]
+rownames(mapped_data) <- mapped_symbols
+
+# Are all HUGO symbols remaining unique? This must return TRUE
+nrow(mapped_data) == length(unique(mapped_symbols))
+
+# Final gene coverage of dataset
+dim(mapped_data)
+
+# Number of rows deleted during mapping?
+nrow(filtered_data) - nrow(mapped_data)
+```
+
+mapped_data is the final output dataset of this workflow.
+
+## Interpretation
+
+*What are the control and test conditions of the dataset?*
+
+The experiment consists of treating WI-38 fibroblasts with TGFb (transforming growth factor beta) and comparing the induced expression changes with a control group at both 1-day and 20-day time points. In this case, the experimental group would be the cells that are treated with TGFb, and the control group are the cells that received no treatment.
+
+*Why is the dataset of interest to me?*
+
+TGFb is known to trigger transdifferentiation of epithelial cells in the airway into mesenchymal cells, which is one of the ways that asthmatic symptoms arise. The dataset is from a study that examined the induced pathways by TGFb in search for genes that are up or downregulated in the downstream fibroblast pathways.  These are all candidate genes that contribute to asthma, which is a common chronic lung disease that I and many relatives personally have. I thought it would be interesting to examine these pathways myself.
+
+*Were there expression values that could not be mapped to current HUGO symbols?*
+
+Yes, there were. 345 expression values were unable to be mapped to HUGO symbols, evident by the number of NA values I removed after conducting the mapping. 
+
+*How many outliers were removed?*
+
+I noticed 5 outliers in my data (the zero-counts in 5 out of 6 D1 samples). I didn't remove any because I felt that their presence was too consistent across one group to simply be measurement error.
+
+*How did you handle replicates?*
+
+I split my data into 4 groups of 3. One group for each combination of time and treatment, and each group contains 3 replicates. This is the same number I use to define the low-count threshold for edgeR.
+
+*What is the final coverage of your dataset?*
+
+The final coverage of my dataset is 12914 features across 12 samples.
