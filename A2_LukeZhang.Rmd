@@ -12,6 +12,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Note: The documentation makes references to the figures directory in my repo as Figure <number>. The corresponding image file is named <number>_<filename>.<format>. For example, Figure 1 is my pre-normalization MDS plot, and corresponds to the file named figures/1_pre-norm_mds.png.
+
 ## Introduction
 
 Begin by producing the cleaned, normalized, and mapped dataset from Assignment 1:
@@ -28,13 +30,70 @@ The experiment protocol has 4 columns per sample (totalling 48 columns in the do
 
 The final result is a data frame of 12 columns and 12914 rows, with unique HUGO identifiers as rownames. We will use this data frame in this assignment. Here are the first 10 rows and last 6 columns (day-20 for both treatments) of the data frame, to get an idea of what it looks like:
 
-```{r processed_data}
-library(knitr)
-kable(mapped_data[1:10, 7:12])
+```{r}
+knitr::kable(mapped_data[1:10, 7:12])
 ```
 
 ## Differential Gene Expression
 
+Our analysis has defined noTGFb and TGFb as its groups, regardless of time. Our goal is to uncover time-independent DEGs in our samples by looking for significantly up/down-regulated genes after treatment with TGFb. Figures 1 and 2 are our previously generated MDS plots, pre- and post-normalization, and the neat clustering with respect to treatment type justifies the usage of Treatment as our principal factor. Based on this, we should be able to get good results in the upcoming analysis.
+
+Construct our model and run the differential analysis.
+```{r}
+library(edgeR)
+
+d <- DGEList(counts=mapped_data, group=samples$Treatment)
+# construct model
+design <- model.matrix(~ samples$Day + samples$Treatment)
+knitr::kable(design)
+
+# estimate dispersion
+d <- estimateDisp(d, design)
+# calculate normalization factors
+d <- calcNormFactors(d)
+# fit model to data
+fit <- glmQLFit(d, design)
+# calculate differential expression
+qlf_test <- glmQLFTest(fit, coef="samples$TreatmentTGFb")
+
+# Get the results
+qlf_output <- topTags(qlf_test, sort.by="PValue", n=nrow(mapped_data))
+```
+
+Let's see what our top results look like:
+```{r}
+# What does this look like?
+knitr::kable(topTags(qlf_test, sort.by="PValue", n=20))
+```
+
+The glmQLFTest has a built in p-value correction called FDR, which uses Benjamini-Hochberg's multiple testing method to lower false discovery rate of significantly expressed genes. We will use this parameter to threshold our corrected gene p-values. Both p-value and FDR are thresholded at < 0.05, an arbitrary threshold, but one that has been the standard in most areas of statistical testing.
+
+```{r}
+# How many genes have p < 0.05?
+length(which(qlf_output$table$PValue < 0.05))
+
+# How many genes have FDR < 0.05?
+length(which(qlf_output$table$FDR < 0.05))
+```
+
+We see that 2925 genes pass the threshold p-value, but after adjustment, this number drops to 467. We conclude that these 467 genes are my significantly differentially expressed genes. Get a separate list of up and down regulated genes.
+
+```{r}
+# Upregulated genes.
+upreg_genes <- qlf_output[qlf_output$table$FDR < 0.05 & qlf_output$table$logFC > 0, ]
+# How many?
+nrow(upreg_genes)
+
+# Down regulated genes.
+downreg_genes <- qlf_output[qlf_output$table$FDR < 0.05 & qlf_output$table$logFC < 0, ]
+# How many?
+nrow(downreg_genes)
+```
+
+We have 285 upregulated genes and 182 downregulated genes after treatment.
+
 ## Thresholded Over-Representation Analysis
 
 ## Interpretation
+
+## References
