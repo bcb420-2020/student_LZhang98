@@ -1,0 +1,40 @@
+---
+title: "Assignment 2: Differential Gene Expression and Preliminary ORA"
+author: "Luke Zhang"
+date: "3/3/2020"
+output:
+    html_document:
+        toc: true
+        toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Begin by producing the cleaned, normalized, and mapped dataset from Assignment 1:
+
+```{r a1, results='hide', message=FALSE}
+source("data_processing.R")
+```
+
+data_processing.R is a script that implements the workflow performed in Assignment 1. It downloads the supplementary data file of GEO dataset [GSE110021](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE110021).
+
+The experiment treats an experimental group of WI-38 fibroblasts with TGFb (transforming growth factor beta) and measures gene expression in comparison to the untreated control group. Gene profiles are generated at 1-day and 20-day time points, so the experiment can be split into 4 groups. Each group has 3 replicates, so our experiment has 12 samples.
+
+The experiment protocol has 4 columns per sample (totalling 48 columns in the downloaded data), corresponding to each lane on the sequencing machine. The script first collapses these individual lanes into a single column for the sample, resulting in an initial data frame of 12 columns (samples) and 25702 genes. Using edgeR, we filter out any genes of total CPM < 3, which is the size of our smallest group of replicates. This removes 12443 uninformative features, and we are left with 13259 genes. The remaining genes are normalized with respect to Treatment Type via edgeR TMM. Finally, the normalized genes have their given Ensemble gene IDs mapped to HGNC symbols, and any unmapped genes were removed. We also ensured that no two genes got mapped to the same symbol.
+
+The final result is a data frame of 12 columns and 12914 rows, with unique HUGO identifiers as rownames. We will use this data frame in this assignment. Here are the first 10 rows and last 6 columns (day-20 for both treatments) of the data frame, to get an idea of what it looks like:
+
+```{r processed_data}
+library(knitr)
+kable(mapped_data[1:10, 7:12])
+```
+
+## Differential Gene Expression
+
+## Thresholded Over-Representation Analysis
+
+## Interpretation
