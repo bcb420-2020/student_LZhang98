@@ -70,13 +70,6 @@ rownames(cpm_data) <- rownames(new_data)
 filtered_data <- new_data[rowSums(cpm_data >= 1) >= 3, ]
 
 
-# Normalize the data with edgeR TMM with respect to treatment type
-filtered_matrix <- as.matrix(filtered_data)
-d <- edgeR::DGEList(counts=filtered_matrix, group=samples$Treatment)
-d <- edgeR::calcNormFactors(d)
-norm_data <- edgeR::cpm(d)
-
-
 # Map Ensemble Gene IDs to HGNC symbols
 symbols <- annotate::lookUp(rownames(filtered_data), "org.Hs.eg", "SYMBOL")
 
