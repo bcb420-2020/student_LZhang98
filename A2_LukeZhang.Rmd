@@ -12,7 +12,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Note: The documentation makes references to the figures directory in my repo as Figure <number>. The corresponding image file is named <number>_<filename>.<format>. For example, Figure 1 is my pre-normalization MDS plot, and corresponds to the file named figures/1_pre-norm_mds.png.
+Note: The documentation makes references to the figures directory in my repo as Figure \<number\>. The corresponding image file is named \<number\>_\<filename\>.\<format\>. For example, Figure 1 is my pre-normalization MDS plot, and corresponds to the file named figures/1_pre-norm_mds.png.
 
 ## Introduction
 
@@ -45,7 +45,6 @@ library(edgeR)
 d <- DGEList(counts=mapped_data, group=samples$Treatment)
 # construct model
 design <- model.matrix(~ samples$Day + samples$Treatment)
-knitr::kable(design)
 
 # estimate dispersion
 d <- estimateDisp(d, design)
@@ -79,18 +78,57 @@ length(which(qlf_output$table$FDR < 0.05))
 We see that 2925 genes pass the threshold p-value, but after adjustment, this number drops to 467. We conclude that these 467 genes are my significantly differentially expressed genes. Get a separate list of up and down regulated genes.
 
 ```{r}
+de_genes <- qlf_output[qlf_output$table$FDR < 0.05, ]
 # Upregulated genes.
-upreg_genes <- qlf_output[qlf_output$table$FDR < 0.05 & qlf_output$table$logFC > 0, ]
+upreg_genes <- de_genes[de_genes$table$logFC > 0, ]
 # How many?
 nrow(upreg_genes)
 
 # Down regulated genes.
-downreg_genes <- qlf_output[qlf_output$table$FDR < 0.05 & qlf_output$table$logFC < 0, ]
+downreg_genes <- de_genes[de_genes$table$logFC < 0, ]
 # How many?
 nrow(downreg_genes)
 ```
 
 We have 285 upregulated genes and 182 downregulated genes after treatment.
+
+Let's visualize our DEGs with a heatmap and an MA plot.
+
+```{r, results='hide', message=FALSE}
+if (! requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+    BiocManager::install("ComplexHeatmap")
+}
+if (! requireNamespace("circlize", quietly = TRUE)) {
+    install.packages("circlize")
+}
+```
+```{r}
+# Get top hits only
+sig_names <- rownames(de_genes)
+heatmap_matrix <- t(scale(t(mapped_data[sig_names, ])))
+# Define colour palette
+heatmap_col <- circlize::colorRamp2(c(min(heatmap_matrix), 0, max(heatmap_matrix)), c("blue", "white", "red"))
+
+heatmap <- ComplexHeatmap::Heatmap(as.matrix(heatmap_matrix), cluster_rows=TRUE,
+                   cluster_columns=TRUE,
+                   show_row_dend=TRUE,
+                   show_column_dend=TRUE,
+                   col=heatmap_col,
+                   show_column_names=TRUE,
+                   show_row_names=FALSE,
+                   show_heatmap_legend=TRUE)
+heatmap
+
+dim(heatmap_matrix)
+```
+
+We see a signficant increase in expression levels between D1 and D20 samples. This is indicative of a systemic upregulation in genes of interest over time for both the control group and the experimental group.
+
+MA Plot:
+```{r}
+my_maplot <- edgeR::plotSmear(qlf_test, de.tags=rownames(de_genes))
+```
+The red points represent significantly up or down regulated genes (FDR < 0.05) by tagging them with the rownames of the de_genes subset. This is a clear visualization that we have a sizable set of DEGs with good FDR values, and that there are slightly more up-regulated than down-regulated genes.
 
 ## Thresholded Over-Representation Analysis
 
