@@ -12,8 +12,6 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Note: The documentation makes references to the figures directory in my repo as Figure \<number\>. The corresponding image file is named \<number\>_\<filename\>.\<format\>. For example, Figure 1 is my pre-normalization MDS plot, and corresponds to the file named figures/1_pre-norm_mds.png.
-
 ## Introduction
 
 Begin by producing the cleaned, normalized, and mapped dataset from Assignment 1:
@@ -36,7 +34,13 @@ knitr::kable(mapped_data[1:10, 7:12])
 
 ## Differential Gene Expression
 
-Our analysis has defined noTGFb and TGFb as its groups, regardless of time. Our goal is to uncover time-independent DEGs in our samples by looking for significantly up/down-regulated genes after treatment with TGFb. Figures 1 and 2 are our previously generated MDS plots, pre- and post-normalization, and the neat clustering with respect to treatment type justifies the usage of Treatment as our principal factor. Based on this, we should be able to get good results in the upcoming analysis.
+Our analysis has defined noTGFb and TGFb as its groups, regardless of time. Our goal is to uncover time-independent DEGs in our samples by looking for significantly up/down-regulated genes after treatment with TGFb. Below are our previously generated MDS plots, pre- and post-normalization, and the neat clustering with respect to treatment type justifies the usage of Treatment as our principal factor:
+
+![Figure 1](figures/pre-norm_mds.png)
+
+![Figure 2](figures/post-norm_mds.png)
+
+Based on this, we should be able to get good results in the upcoming analysis.
 
 Construct our model and run the differential analysis.
 ```{r}
@@ -116,7 +120,8 @@ heatmap <- ComplexHeatmap::Heatmap(as.matrix(heatmap_matrix), cluster_rows=TRUE,
                    col=heatmap_col,
                    show_column_names=TRUE,
                    show_row_names=FALSE,
-                   show_heatmap_legend=TRUE)
+                   show_heatmap_legend=TRUE,
+                   column_title="Heatmap of Top Hits")
 heatmap
 
 dim(heatmap_matrix)
@@ -126,11 +131,53 @@ We see a signficant increase in expression levels between D1 and D20 samples. Th
 
 MA Plot:
 ```{r}
-my_maplot <- edgeR::plotSmear(qlf_test, de.tags=rownames(de_genes))
+my_maplot <- edgeR::plotSmear(qlf_test, de.tags=rownames(de_genes), main="MA Plot")
 ```
+
 The red points represent significantly up or down regulated genes (FDR < 0.05) by tagging them with the rownames of the de_genes subset. This is a clear visualization that we have a sizable set of DEGs with good FDR values, and that there are slightly more up-regulated than down-regulated genes.
 
 ## Thresholded Over-Representation Analysis
+
+To make things easier, I created 3 text files called `de_genes.txt` (all DEGS), `upreg_genes.txt` (upregulated only), and `downreg_genes.txt` (down regulated only). The follow snippet fills these files with the gene names of my top hits. The gene names can now be easily copy-pasted into g:Profiler.
+```{r}
+file1 <- file("de_genes.txt")
+file2 <- file("upreg_genes.txt")
+file3 <- file("downreg_genes.txt")
+writeLines(rownames(de_genes), file1)
+writeLines(rownames(upreg_genes), file2)
+writeLines(rownames(downreg_genes), file3)
+close(file1)
+close(file2)
+close(file3)
+```
+
+A g:Profiler (https://biit.cs.ut.ee/gprofiler/gost) query returns our over-represented genesets. I chose to use g:Profiler due to the ease of use of its graphical web interface, ease of parsing the returned data, and familiarity with its functions from the homework. 
+
+Copy-paste the contents of `ge_genes.txt` into the query box. Set the threshold to Benjamini-Hochberg FDR (multiple hypothesis testing) and choose GO biological processes, Reactome, KEGG, and WikiPathways as my annotation sources. According to g:Profiler, GO biological processes was last released on 2019-07-01, Reactome was last released on 2019-10-02, KEGG was last released on 2019-09-30, and WikiPathways was last released on 2019-09-10. This means that all my sources have been updated within the past approximately half a year, making them all recent enough for good analysis. I chose these 4 pathways because I wanted as many datasets pertaining to biological processes as possible, as identifying these pathways is the goal of this analysis.
+
+The following screencaps show the top results of g:Profiler from all datasets (WikiPathway returned 0 results). Initially, no restriction was placed on the term sizes.
+
+![Figure 3: Results from GO:BP, 59 results. We see many large pathways for cellular development.](figures/pooled_BP_unrestricted.png)
+
+![Figure 4: Results from KEGG, 8 results.](figures/pooled_KEGG.png)
+
+![Figure 5: Results from REAC, 7 results](figures/pooled_REAC.png)
+
+I then placed an arbitrary restriction on the term sizes of 5-200 (emulating the homework assignment) to remove large pathways and focus on smaller, more local ones. Only the results for GO:BP change:
+
+![Figure 6: Size-restricted results from GO:BP, 23 results (36 removed).](figures/pooled_BP.png)
+
+### Upregulated genes only
+
+The most significant difference when we query only the upregulated genes separately is the discovery of 2 results from WikiPathway (whereas the entire list failed to produce any results). They are summarized in the following screenshot of the results table:
+
+![Figure 7: Upregulated query results from WP, 2 results.](figures/up_WP.png)
+
+### Downregulated genes only
+
+The results of querying downregulated genes are extremely interesting, as almost all results have been lost except for a single term from GO:BP and 2 more terms from WikiPathways. This implies that downregulation on its own is not a significant measure by which to analyze the genesets, and that
+
+![Figure 8: Downregulated query results from all sources, 3 results total.](figures/down_all.png)
 
 ## Interpretation
 
