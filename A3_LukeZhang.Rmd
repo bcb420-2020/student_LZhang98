@@ -54,7 +54,7 @@ rank <- -log(q_value) * signFC
 rownames(gene_table) <- NULL
 rnk_table <- cbind(gene_names, rank)
 colnames(rnk_table) <- c("gene_names", "rank")
-write.table(rnk_table, "ranked_genes.rnk", row.names=FALSE, sep='\t')
+write.table(rnk_table, "ranked_genes.rnk", row.names=FALSE, sep='\t',quote=FALSE)
 ```
 
 ## Non-thresholded Geneset Enrichment Analysis
