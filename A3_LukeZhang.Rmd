@@ -1,0 +1,71 @@
+---
+title: 'Assignment 3: Dataset Pathway and Network Analysis'
+author: "Luke Zhang"
+date: "4/9/2020"
+output: 
+    html_document:
+        toc: true
+        toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+### Dataset Download and Cleaning
+
+Begin by producing the cleaned, normalized, and mapped dataset from Assignment 1:
+
+```{r a1, results='hide', message=FALSE}
+source("data_processing.R")
+```
+
+data_processing.R is a script that implements the workflow performed in Assignment 1. It downloads the supplementary data file of GEO dataset [GSE110021](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE110021).
+
+The experiment treats an experimental group of WI-38 fibroblasts with TGFb (transforming growth factor beta) and measures gene expression in comparison to the untreated control group. Gene profiles are generated at 1-day and 20-day time points, so the experiment can be split into 4 groups. Each group has 3 replicates, so our experiment has 12 samples.
+
+The experiment protocol has 4 columns per sample (totalling 48 columns in the downloaded data), corresponding to each lane on the sequencing machine. The script first collapses these individual lanes into a single column for the sample, resulting in an initial data frame of 12 columns (samples) and 25702 genes. Using edgeR, we filter out any genes of total CPM < 3, which is the size of our smallest group of replicates. This removes 12443 uninformative features, and we are left with 13259 genes. The remaining genes are normalized with respect to Treatment Type via edgeR TMM. Finally, the normalized genes have their given Ensemble gene IDs mapped to HGNC symbols, and any unmapped genes were removed. We also ensured that no two genes got mapped to the same symbol.
+
+The final result is a data frame of 12 columns and 12914 rows, with unique HUGO identifiers as rownames. We will use this data frame in this assignment. Here are the first 10 rows and last 6 columns (day-20 for both treatments) of the data frame, to get an idea of what it looks like:
+
+```{r}
+knitr::kable(mapped_data[1:10, 7:12])
+```
+
+### Preliminary Differential Expression Analysis
+
+We performed a QLF test on the cleaned data above.
+
+```{r a2, results='hide', message=FALSE}
+source("gene_ranking.R")
+```
+
+In A2, we extracted only the genes with a high enough p-value to perform a thresholded analysis. In this workflow we will use the full ranked geneset instead. The above script ranks the genes by log-fold change and produces the `ranked_genes` table, which we will write into a `ranked_genes.rnk` file for GSEA.
+
+```{r rnk}
+# Extract gene list and score by -log(qvalue) * sign(FC)
+gene_table <- ranked_genes[["table"]]
+gene_names <- rownames(gene_table)
+q_value <- gene_table$FDR
+signFC <- sign(gene_table$logFC)
+rank <- -log(q_value) * signFC
+rownames(gene_table) <- NULL
+rnk_table <- cbind(gene_names, rank)
+colnames(rnk_table) <- c("gene_names", "rank")
+write.table(rnk_table, "ranked_genes.rnk", row.names=FALSE, sep='\t')
+```
+
+## Non-thresholded Geneset Enrichment Analysis
+
+First, write the 
+
+## Visualization in Cytoscape
+
+## Interpretation
+
+## Post-analysis
+
+## References
+
